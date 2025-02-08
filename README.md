@@ -10,6 +10,11 @@ This library is built to split a Uint8Array into separate equally-sized chunks,
 adding chunks to be able to reconstruct the original Uint8Array as long as
 {quorum} chunks remain.
 
+The chunks are build (and restored) using lagrange interpolation, similar to how
+[shamir secret sharing](https://en.wikipedia.org/wiki/Shamir%27s_secret_sharing)
+works over a finite field (2^8), using the original data as the lower-bound
+shares.
+
 Quirks
 ======
 
