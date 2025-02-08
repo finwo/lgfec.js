@@ -1,0 +1,35 @@
+{
+  "name": "@finwo/lgfec",
+  "version": "1.0.0",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "node build.js",
+    "test": "npx -y ts-node test/main.ts"
+  },
+  "keywords": [],
+  "author": "Yersa Nordman <finwo@pm.me>",
+  "license": "MIT-0",
+  "description": "Lagrange interpolation based forward error correction",
+  "files": [
+    "dist",
+    "package.json",
+    "README.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/finwo/lgfec.js.git"
+  },
+  "funding": "https://github.com/sponsors/finwo",
+  "bugs": {
+    "url": "https://github.com/finwo/lgfec.js/issues"
+  },
+  "homepage": "https://github.com/finwo/lgfec.js#readme",
+  "devDependencies": {
+    "@types/node": "^22.13.1",
+    "@types/tape": "^5.8.1",
+    "esbuild": "^0.25.0",
+    "esbuild-plugin-d.ts": "^1.3.1",
+    "fast-glob": "^3.3.3",
+    "tape": "^5.9.0"
+  }
+}
