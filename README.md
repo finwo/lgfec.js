@@ -6,25 +6,21 @@ Lagrange interpolation based forward error correction
 What
 ====
 
-This library is built to split a Uint8Array into separate equally-sized chunks,
-adding chunks to be able to reconstruct the original Uint8Array as long as
-{quorum} chunks remain.
+This library is built to split a Uint8Array into separate equally-sized chunks, adding chunks to be able to reconstruct
+the original Uint8Array as long as {quorum} chunks remain.
 
-The chunks are build (and restored) using lagrange interpolation, similar to how
-[shamir secret sharing](https://en.wikipedia.org/wiki/Shamir%27s_secret_sharing)
-works over a finite field (2^8), using the original data as the lower-bound
-shares.
+The chunks are generated (and restored) using lagrange interpolation, similar to how
+[shamir secret sharing](https://en.wikipedia.org/wiki/Shamir%27s_secret_sharing) works over a finite field (2^8), using
+the original data as the lower-bound shares.
 
 Quirks
 ======
 
-When your data is not nicely dividable by the quorum number, 0-bytes will be
-appended to the data.
+When your data is not nicely dividable by the quorum number, 0-bytes will be appended to the data.
 
-If you need an exact reconstruction, use `splitExact` and `combineExact`
-instead. These will prefix the data with a length indicator before handing the
-data off to `split` and `combine`, limiting the max data size to 2GiB but
-ensuring you get back the exact same bytes.
+If you need an exact reconstruction, use `splitExact` and `combineExact` instead. These will prefix the data with a
+length indicator before handing the data off to `split` and `combine`, limiting the max data size to 2GiB but ensuring
+you get back the exact same bytes.
 
 Usage
 =====
