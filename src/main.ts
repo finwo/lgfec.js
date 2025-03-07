@@ -1,5 +1,5 @@
 import {AssertionError} from 'assert';
-import { interpolatePolynomial } from './core';
+import { interpolatePolynomial, reconstruct } from './core';
 import {crc16} from '@finwo/crc16-xmodem';
 import {majority} from './util';
 
@@ -123,12 +123,14 @@ export function combine(shares: Uint8Array[], options?: CombineOptions): Uint8Ar
   }
 
   // Build a map from share array index to chunk index
+  let   maxShare      = -Infinity;
   const indexPosition = shareLength - 1 - (opts.embeddedCrc ? 2 : 0);
   const indexes       = new Uint8Array(shares.length);
   for(let i = 0 ; i < shares.length ; i++) {
     if (!shares[i]) continue;
     if (opts.embeddedMeta) indexes[i] = shares[i][indexPosition];
     else indexes[i] = i;
+    maxShare = Math.max(indexes[i], maxShare);
   }
 
   // Validate shares
@@ -152,46 +154,25 @@ export function combine(shares: Uint8Array[], options?: CombineOptions): Uint8Ar
 
   // Fetch quorum or majority vote from all shares
   const quorumPosition = shareLength - 2 - (opts.embeddedCrc ? 2 : 0);
-  const quorum: number = 'quorum' in opts ? opts.quorum : majority(shares.map(a => a[quorumPosition]));
+  const quorum: number = 'quorum' in opts ? opts.quorum : majority(shares.filter(s=>s).map(a => a[quorumPosition]));
   if (shares.length < quorum) {
     return false;
   }
 
-  // Build sample map
+  // Let's rebuild the actual data
   const chunkLength = shareLength - (opts.embeddedMeta?2:0) - (opts.embeddedCrc?2:0);
   const data        = new Uint8Array(quorum * chunkLength);
-  const xSamples    = new Uint8Array(quorum);
-  const ySamples    = new Uint8Array(quorum);
-  const has         = {};
-
-  // Fetch assumed-good data
-  for(let i = 0 ; i < shares.length ; i++) {
-    if (!shares[i]) continue;
-    if (!crcChecks[i]) continue;
-    const chunk = indexes[i];
-    has[chunk] = true;
-    if (chunk >= quorum) continue;
-    data.set(shares[i].subarray(0, chunkLength), chunkLength * chunk);
-  }
-
-  // We have enough assumed-good data to do a quick pass
-  if (foundGood >= quorum) {
-    for(let b=0; b < chunkLength; b++) {
-      let j = 0;
-      for(let i=0; j < quorum; i++) {
-        if (!shares[i]) continue;
-        if (!crcChecks[i]) continue;
-        xSamples[j] = indexes[i];
-        ySamples[j] = shares[i][b];
-        j++;
-      }
-      for(let i=0; i < quorum; i++) {
-        if (has[i]) continue;
-        data[b+(i*chunkLength)] = interpolatePolynomial(xSamples, ySamples, i);
-      }
+  const xSamples    = indexes;
+  const ySamples    = new Uint8Array(shares.length);
+  for(let b=0 ; b < chunkLength; b++) {
+    for(let i=0; i < shares.length; i++) {
+      ySamples[i] = shares[i][b];
     }
-  } else {
-    throw new Error("Corrupt share recovery not implemented yet");
+
+    const slice = reconstruct(xSamples, ySamples, quorum, quorum, crcChecks);
+    for(let i=0; i < quorum; i++) {
+      data[b+(i*chunkLength)] = slice[i];
+    }
   }
 
   // Remove padding & done

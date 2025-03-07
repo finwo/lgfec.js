@@ -1,3 +1,5 @@
+import {AssertionError} from "assert";
+
 // Provides log(X)/log(g) at each index X.
 const LOG_TABLE: Readonly<Uint8Array> = new Uint8Array([
   0x00, 0xff, 0xc8, 0x08, 0x91, 0x10, 0xd0, 0x36, 0x5a, 0x3e, 0xd8, 0x43, 0x99, 0x77, 0xfe, 0x18,
@@ -80,4 +82,76 @@ export function interpolatePolynomial(xSamples: Uint8Array, ySamples: Uint8Array
     result = add(result, mult(ySamples[i]!, basis));
   }
   return result;
+}
+
+export function reconstruct(
+  xSamples: Uint8Array,
+  ySamples: Uint8Array,
+  recoverSamples: number,
+  quorum: number,
+  validHint: boolean[],
+): Uint8Array {
+
+  // Sanity checking
+  if (xSamples.length !== ySamples.length) throw new AssertionError({ message: 'Sample count mismatch' });
+  if (xSamples.length !== validHint.length) throw new AssertionError({ message: 'Sample count mismatch' });
+  if (quorum > xSamples.length) throw new AssertionError({ message: 'Insufficient samples given to reach quorum' });
+  const samplesGiven = xSamples.length;
+
+  // Build xy map of samples
+  const xy = ySamples.reduce((r,y,i) => {
+    r[xSamples[i]] = y;
+    return r;
+  }, {});
+
+  // Focus on validHint, it likely saves us some computation time
+  const validCount = validHint.map(v=>v?1:0).reduce((r,v)=>r+v,0);
+  if (validCount >= quorum) {
+    const permutationMap = xSamples.filter((_,i)=>validHint[i]).slice(0,quorum);
+
+    // Build some maps to reduce iteration
+    const fx = permutationMap;
+    const fy = permutationMap.map(x=>xy[x]);
+    const hx = permutationMap.reduce((r,x,i)=>{
+      r[x] = i;
+      return r;
+    }, {});
+
+    // Generate all data
+    const generated = new Uint8Array(recoverSamples);
+    for(let i = 0; i < recoverSamples; i++) {
+      if (i in hx) {
+        generated[i] = fy[hx[i]];
+        continue;
+      }
+      generated[i] = interpolatePolynomial(fx, fy, i);
+    }
+
+    // Validate against validHint
+    let seemsValid = true;
+    for(const [i,v] of Object.entries(validHint)) {
+      if (!v) continue;
+      const x = xSamples[i];
+      const y = ySamples[i];
+      const calculated = x < recoverSamples ? generated[x] : interpolatePolynomial(fx, fy, x);
+      if (calculated !== y) {
+        seemsValid = false;
+        break;
+      }
+    }
+
+    // Return if valid hints resulted in matching data
+    if (seemsValid) return generated;
+  }
+
+  // Build list of combinations to check
+  const permutationMaps: Uint8Array[] = [];
+  for(let i=0; i < (2<<samplesGiven); i++) {
+    const _map  = ('0'.repeat(samplesGiven) + i.toString(2)).slice(-samplesGiven).split('').reverse().map(v=>parseInt(v));
+    const w     = _map.reduce((r,v)=>r+v,0);
+    if (w!==quorum) continue;
+    permutationMaps.push(xSamples.filter((_,i)=>_map[i]));
+  }
+
+  throw new Error('Recovering from corrupt blobs is not yet supported');
 }

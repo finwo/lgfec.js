@@ -1,6 +1,6 @@
 type ObjectKey = string | symbol | number;
 
-export function majority<T extends ObjectKey>(votes: T[]): null | T {
+export function majority(votes: number[]): null | number {
 
   // Count the votes
   const counted: Record<ObjectKey, number> = {};
@@ -17,5 +17,5 @@ export function majority<T extends ObjectKey>(votes: T[]): null | T {
     voteMax   = count;
     voteValue = vote;
   }
-  return voteValue;
+  return parseInt(voteValue);
 }
