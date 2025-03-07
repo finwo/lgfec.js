@@ -6,8 +6,8 @@ Note: Chunks are processed as columns, byte for byte.
 
 ### Data preparation
 
-Data is first appended with a 4-byte unsigned integer, reserved for indicating
-the padding applied to the last chunk after splitting.
+Data is first appended with a 4 null-bytes, reserved as space for indicating the
+padding applied to the last chunk after splitting.
 
 Afterwards, the data is split into #quorum chunks, and #shares-#quorum empty
 chunks are generated for the purpose of redundancy.
@@ -52,3 +52,44 @@ TODO
 - quorum valid chunks given = use those
 - extra chunks = double-check if it generates the same data => valid is done
 - invalid chunks with valid crc = generate all combinations and use majority vote for column
+
+Original:
+  D: 1
+  D: 2
+  R: 3
+  R: 4
+  R: 5
+
+Erasure = fine:
+  D: 2
+  R: 3..5
+
+Corrupt = majority vote:
+
+22345
+
+22 ,      22222
+ 23,      12345
+  34,     12345
+   45,    12345
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
