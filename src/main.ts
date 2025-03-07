@@ -164,15 +164,15 @@ export function combine(shares: Uint8Array[], options?: CombineOptions): Uint8Ar
   const ySamples    = new Uint8Array(quorum);
   const has         = {};
 
-  // // Fetch assumed-good data
-  // for(let i = 0 ; i < shares.length ; i++) {
-  //   if (!shares[i]) continue;
-  //   if (!crcChecks[i]) continue;
-  //   const chunk = indexes[i];
-  //   has[chunk] = true;
-  //   if (chunk >= quorum) continue;
-  //   data.set(shares[i].subarray(0, chunkLength), chunkLength * chunk);
-  // }
+  // Fetch assumed-good data
+  for(let i = 0 ; i < shares.length ; i++) {
+    if (!shares[i]) continue;
+    if (!crcChecks[i]) continue;
+    const chunk = indexes[i];
+    has[chunk] = true;
+    if (chunk >= quorum) continue;
+    data.set(shares[i].subarray(0, chunkLength), chunkLength * chunk);
+  }
 
   // We have enough assumed-good data to do a quick pass
   if (foundGood >= quorum) {
@@ -181,24 +181,24 @@ export function combine(shares: Uint8Array[], options?: CombineOptions): Uint8Ar
       for(let i=0; j < quorum; i++) {
         if (!shares[i]) continue;
         if (!crcChecks[i]) continue;
-        xSamples[j] = shares[i][b];
-        ySamples[j] = indexes[i];
+        xSamples[j] = indexes[i];
+        ySamples[j] = shares[i][b];
         j++;
       }
       for(let i=0; i < quorum; i++) {
+        if (has[i]) continue;
         data[b+(i*chunkLength)] = interpolatePolynomial(xSamples, ySamples, i);
       }
-
     }
+  } else {
+    throw new Error("Corrupt share recovery not implemented yet");
   }
 
-  for(let b=0; b < chunkLength; b++) {
-    for(let i=0; i < quorum; i++) ySamples[i] = shares[i][b];
-    for(let i=0; i < quorum; i++) {
-      if (has[i]) continue;
-      data[b+(i*chunkLength)] = interpolatePolynomial(xSamples, ySamples, i);
-    }
-  }
-
-  return data;
+  // Remove padding & done
+  const paddingLength =
+    (data[data.byteLength - 4] << 24) +
+    (data[data.byteLength - 3] << 16) +
+    (data[data.byteLength - 2] <<  8) +
+    (data[data.byteLength - 1] <<  0);
+  return data.subarray(0, data.byteLength - paddingLength);
 }
